@@ -2,6 +2,8 @@
 
 import { fetchFakerData } from "./functions.js";
 
+import { saveVote, getVotes } from "./firebase.js";
+
 /**
  * Muestra una notificación en pantalla agregando la clase 'md:block'
  * al elemento con el ID 'toast-interactive', si existe.
@@ -70,8 +72,97 @@ const loadData = async () => {
     }
 };
 
+/**
+ * Habilita el formulario de votación y gestiona el envío.
+ * @returns {void}
+ */
+const enableForm = () => {
+    const form = document.getElementById('form_voting');
+    if (!form) return;
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const select = document.getElementById('select_product');
+        if (!select) return;
+
+        const productID = select.value;
+
+        if (productID) {
+
+            await saveVote(productID);
+
+        }
+
+        form.reset();
+
+        await displayVotes();
+    });
+};
+
+/**
+ * Muestra una tabla con el total de votos por producto.
+ * @returns {Promise<void>}
+ */
+const displayVotes = async () => {
+    const votes = await getVotes();
+    if (!votes) return;
+
+    // Contar votos por producto
+    const voteCounts = {};
+    Object.values(votes).forEach(vote => {
+        const product = vote.productID;
+        if (!voteCounts[product]) {
+            voteCounts[product] = 0;
+        }
+        voteCounts[product] += 1;
+    });
+
+    // Crear tabla
+    let tableHTML = `
+        <table class="min-w-full bg-white dark:bg-gray-800 rounded shadow mt-6">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">Producto</th>
+                    <th class="py-2 px-4 border-b text-left">Total de votos</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    Object.entries(voteCounts).forEach(([product, count]) => {
+        tableHTML += `
+            <tr>
+                <td class="py-2 px-4 border-b">${product}</td>
+                <td class="py-2 px-4 border-b">${count}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+    // Mostrar la tabla en el contenedor con id="results"
+    let container = document.getElementById("results");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "results";
+        document.body.appendChild(container);
+    }
+    container.innerHTML = tableHTML;
+};
+
+/**
+ * Habilita el formulario de votación y gestiona el envío.
+ * @returns {void}
+ */
+
 (function() {
     showToast();
     showVideo();
     loadData();
+    enableForm();
+    displayVotes();
 })();
